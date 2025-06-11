@@ -7,3 +7,5 @@ config:
   vpc_id: vpc-054b75f6e02609595
   subnet_id: subnet-026bf861b538b0b63
   security_group_id: sg-0385fa4b97d81a336
+  accounts:
+    account_id: "979566283533"

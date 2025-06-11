@@ -1,0 +1,169 @@
+name: Build & Share AppStream Rocky Linux Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      builder_name:
+        description: 'Unique name for the Image Builder instance'
+        required: true
+        type: string
+      image_name:
+        description: 'Desired AppStream Output image name'
+        required: true
+        type: string
+  
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+  actions: read
+
+env:
+  AWS_REGION: eu-west-2
+
+jobs:
+  infra:
+    name: Provision infra with Terragrunt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Load config.yaml into env vars
+        run: |
+          echo "ACCOUNT_ID=$(yq e '.config.account_id' config.yaml)"           >> $GITHUB_ENV
+          echo "SUBNET_ID=$(yq e '.config.subnet_id' config.yaml)"             >> $GITHUB_ENV
+          echo "SECURITY_GROUP_ID=$(yq e '.config.security_group_id' config.yaml)" >> $GITHUB_ENV
+          echo "LIVE_ACCOUNT_ID=$(yq e '.config.live_account_id' config.yaml)" >> $GITHUB_ENV
+          echo "PRELIVE_ACCOUNT_ID=$(yq e '.config.prelive_account_id' config.yaml)" >> $GITHUB_ENV
+    
+      - name: Assume Terragrunt Plan Role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ env.ACCOUNT_ID }}:role/cc-appstream2-terragrunt-plan-role
+          aws-region: eu-west-2
+
+      - name: Create output folder
+        run: mkdir -p $GITHUB_WORKSPACE/outputs/${{ inputs.path }}
+
+      - name: Find and remove .terragrunt-cache directories
+        run: |
+          echo "Finding and removing all .terragrunt-cache directories in the working directory..."
+          sudo find $GITHUB_WORKSPACE -type d -name '.terragrunt-cache' -exec rm -rf {} +
+          echo "Completed removal of .terragrunt-cache directories."
+
+      - name: Debug directory creation
+        run: echo "Path:$GITHUB_WORKSPACE/outputs/${{ inputs.path }}"
+
+      - name: Terragrunt Plan
+        uses: gruntwork-io/terragrunt-action@v2
+        with:
+          tf_version: 1.9.3
+          tg_version: 0.59.6
+          tg_dir: ./ccpamappstream/
+          tg_command: run-all plan
+        timeout-minutes: 20
+
+      - name: Terragrunt Apply
+        uses: gruntwork-io/terragrunt-action@v2
+        with:
+          tf_version: 1.9.3
+          tg_version: 0.59.6
+          tg_dir: ./ccpamappstream/
+          tg_command: run-all apply -auto-approve
+        timeout-minutes: 20
+
+  build:
+    name: Trigger Step Function & Wait
+    needs: infra
+    if: github.ref == 'refs/heads/main' && success()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set environment variables
+        run: |
+          echo "ACCOUNT_ID=`yq '.config.accounts.account_id' config.yaml`" >> $GITHUB_ENV
+
+      - name: Configure AWS credentials with role to assume
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ env.ACCOUNT_ID }}:role/cc-appstream2-terragrunt-plan-role
+          aws-region: eu-west-2
+
+      - name: Find and remove .terragrunt-cache directories
+        run: |
+          echo "Finding and removing all .terragrunt-cache directories in the working directory..."
+          sudo find $GITHUB_WORKSPACE -type d -name '.terragrunt-cache' -exec rm -rf {} +
+          echo "Completed removal of .terragrunt-cache directories."
+
+      - name: Install Terragrunt & Terraform
+        uses: gruntwork-io/terragrunt-action@v2
+        env:
+           INPUT_PRE_EXEC_0: |
+             curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip && \
+             unzip -q /tmp/awscliv2.zip -d /tmp && \
+             /tmp/aws/install --update && \
+             rm -rf /tmp/aws /tmp/awscliv2.zip
+        with:
+          tf_version: 1.9.3
+          tg_version: 0.59.6
+          tg_dir: ./ccpamappstream/
+          tg_command:  --help # we only need the install, so use a no-op command
+        timeout-minutes: 10
+
+      - name: Get State Machine ARN
+        id: get-sm
+        working-directory: ./ccpamappstream
+        run: |
+          echo "SM_ARN=$(terragrunt output --raw state_machine_arn)" >> $GITHUB_ENV
+
+      - name: Start Step Function Execution
+        id: start
+        run: |
+          PAYLOAD=$(jq -n \
+            --arg builder "${{ github.event.inputs.builder_name }}" \
+            --arg baseImage "${{ github.event.inputs.image_name }}" \
+            --arg subnet "${{ secrets.SUBNET_ID }}" \
+            --arg sg "${{ secrets.SECURITY_GROUP_ID }}" \
+            --arg liveAcct "${{ secrets.LIVE_ACCOUNT_ID }}" \
+            --arg preliveAcct "${{ secrets.PRELIVE_ACCOUNT_ID }}" \
+            '{
+              BuilderName:           $builder,
+              BaseImageName:         $baseImage,
+              SubnetIds:             [$subnet],
+              SecurityGroupIds:      [$sg],
+              live_account_id:       $liveAcct,
+              prelive_account_id:    $preliveAcct
+            }')
+
+          echo "Payload: $PAYLOAD"
+          EXEC_ARN=$(aws stepfunctions start-execution \
+            --state-machine-arn "${{ steps.get-sm.outputs.SM_ARN }}" \
+            --input "$PAYLOAD" \
+            --query executionArn --output text)
+          echo "EXEC_ARN=$EXEC_ARN" >> $GITHUB_OUTPUT
+        
+      - name: Wait for Step Function to Succeed
+        run: |
+          aws stepfunctions wait execution-succeeded \
+            --execution-arn ${{ steps.start.outputs.EXEC_ARN }}
+        
+      - name: Describe the new AppStream image
+        run: |
+          aws appstream describe-images \
+            --names "${{ github.event.inputs.image_name }}" \
+            --query "Images[0].{Name: Name, State: State}" \
+            --output table
+        
