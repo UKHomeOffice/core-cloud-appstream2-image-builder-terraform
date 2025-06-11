@@ -1,0 +1,188 @@
+{
+  "Comment": "AppStream Image Builder Automation",
+  "StartAt": "CreateImageBuilder",
+  "States": {
+    "CreateImageBuilder": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:appstream:createImageBuilder",
+      "Parameters": {
+        "Name.$": "$.BuilderName",
+        "ImageName.$": "$.BaseImageName",
+        "InstanceType": "stream.standard.medium",
+        "IamRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/<AppStreamInstanceRoleName>",
+        "EnableDefaultInternetAccess": false,
+        "VpcConfig": {
+          "SubnetIds.$": "$.SubnetIds",
+          "SecurityGroupIds.$": "$.SecurityGroupIds"
+        }
+      },
+      "Next": "WaitForBuilderRunning",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "IntervalSeconds": 30,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ]
+    },
+    "WaitForBuilderRunning": {
+      "Type": "Wait",
+      "Seconds": 60,
+      "Next": "CheckBuilderStatus"
+    },
+    "CheckBuilderStatus": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:appstream:describeImageBuilders",
+      "Parameters": {
+        "Names.$": "States.Array($.BuilderName)"
+      },
+      "Next": "IsBuilderRunning"
+    },
+    "IsBuilderRunning": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.ImageBuilders[0].State",
+          "StringEquals": "RUNNING",
+          "Next": "GetInstanceId"
+        }
+      ],
+      "Default": "WaitForBuilderRunning"
+    },
+    "GetInstanceId": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:ec2:describeInstances",
+      "Parameters": {
+        "Filters": [
+          {
+            "Name": "tag:aws:appstream:image-builder",
+            "Values.$": "States.Array($.BuilderName)"
+          }
+        ]
+      },
+      "Next": "RunSSMCommand",
+      "ResultPath": "$.InstanceInfo"
+    },
+    "RunSSMCommand": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:ssm:sendCommand",
+      "Parameters": {
+        "DocumentName": "<YourSSMDocumentName>",
+        "InstanceIds.$": "States.Array($.InstanceInfo.Reservations[0].Instances[0].InstanceId)",
+        "TimeoutSeconds": 3600
+      },
+      "Next": "WaitForSSMCommand",
+      "ResultPath": "$.CommandInfo"
+    },
+    "WaitForSSMCommand": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "CheckSSMCommandStatus"
+    },
+    "CheckSSMCommandStatus": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:ssm:getCommandInvocation",
+      "Parameters": {
+        "CommandId.$": "$.CommandInfo.Command.CommandId",
+        "InstanceId.$": "$.InstanceInfo.Reservations[0].Instances[0].InstanceId"
+      },
+      "Next": "IsSSMCommandComplete"
+    },
+    "IsSSMCommandComplete": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Status",
+          "StringEquals": "Success",
+          "Next": "WaitForImageCreation"
+        },
+        {
+          "Variable": "$.Status",
+          "StringEquals": "Failed",
+          "Next": "SSMCommandFailed"
+        }
+      ],
+      "Default": "WaitForSSMCommand"
+    },
+    "WaitForImageCreation": {
+      "Type": "Wait",
+      "Seconds": 120,
+      "Next": "CheckImageStatus"
+    },
+    "CheckImageStatus": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:appstream:describeImages",
+      "Parameters": {
+        "Names.$": "States.Array($.ImageName)"
+      },
+      "Next": "IsImageReady"
+    },
+    "IsImageReady": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.Images[0].State",
+          "StringEquals": "AVAILABLE",
+          "Next": "ShareImage"
+        },
+        {
+          "Variable": "$.Images[0].State",
+          "StringEquals": "FAILED",
+          "Next": "ImageCreationFailed"
+        }
+      ],
+      "Default": "WaitForImageCreation"
+    },
+    "ShareImage": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:appstream:updateImagePermissions",
+      "Parameters": {
+        "Name.$": "$.ImageName",
+        "ImagePermissions": {
+          "allowFleet": true,
+          "allowImageBuilder": true
+        },
+        "SharedAccountId": "$.LiveAccount"
+      },
+      "Next": "ShareImagePrelive",
+      "ResultPath": "$.ShareLive"
+    },
+    "ShareImagePrelive": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:appstream:updateImagePermissions",
+      "Parameters": {
+        "Name.$": "$.ImageName",
+        "ImagePermissions": {
+          "allowFleet": true,
+          "allowImageBuilder": true
+        },
+        "SharedAccountId": "$.PreliveAccount"
+      },
+      "Next": "DeleteImageBuilder",
+      "ResultPath": "$.SharePrelive"
+    },
+    "DeleteImageBuilder": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:appstream:deleteImageBuilder",
+      "Parameters": {
+        "Name.$": "$.BuilderName"
+      },
+      "Next": "Success"
+    },
+    "Success": {
+      "Type": "Succeed",
+      "Result": "AppStream image creation and sharing completed successfully"
+    },
+    "SSMCommandFailed": {
+      "Type": "Fail",
+      "Error": "SSMCommandFailed",
+      "Cause": "SSM command execution failed"
+    },
+    "ImageCreationFailed": {
+      "Type": "Fail",
+      "Error": "ImageCreationFailed",
+      "Cause": "Image creation failed"
+    }
+  }
+}
