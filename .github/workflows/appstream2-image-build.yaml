@@ -63,7 +63,7 @@ jobs:
       - name: Assume Terragrunt Plan Role
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ env.ACCOUNT_ID }}:role/cc-appstream2-terragrunt-plan-role
+          role-to-assume: arn:aws:iam::${{ env.ACCOUNT_ID }}:role/cc-appstream2-terragrunt-apply-role
           aws-region: eu-west-2
 
       - name: Find and remove .terragrunt-cache directories
@@ -115,7 +115,7 @@ jobs:
       - name: Configure AWS credentials with role to assume
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ env.ACCOUNT_ID }}:role/cc-appstream2-terragrunt-plan-role
+          role-to-assume: arn:aws:iam::${{ env.ACCOUNT_ID }}:role/cc-appstream2-terragrunt-apply-role
           aws-region: eu-west-2
 
       - name: Install Terragrunt & Terraform
