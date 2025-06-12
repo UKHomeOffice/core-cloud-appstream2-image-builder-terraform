@@ -38,14 +38,27 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+      
+      - name: Install yq binary
+        run: |
+            curl -L \
+            https://github.com/mikefarah/yq/releases/download/v4.30.8/yq_linux_amd64 \
+            -o /usr/local/bin/yq
+            chmod +x /usr/local/bin/yq
+            yq --version
 
       - name: Load config.yaml into env vars
+        shell: bash
         run: |
-          echo "ACCOUNT_ID=$(yq e '.config.account_id' config.yaml)"           >> $GITHUB_ENV
-          echo "SUBNET_ID=$(yq e '.config.subnet_id' config.yaml)"             >> $GITHUB_ENV
-          echo "SECURITY_GROUP_ID=$(yq e '.config.security_group_id' config.yaml)" >> $GITHUB_ENV
-          echo "LIVE_ACCOUNT_ID=$(yq e '.config.live_account_id' config.yaml)" >> $GITHUB_ENV
-          echo "PRELIVE_ACCOUNT_ID=$(yq e '.config.prelive_account_id' config.yaml)" >> $GITHUB_ENV
+            echo "PROJECT_NAME=$(yq e '.config.project_name' config.yaml)"            >> $GITHUB_ENV
+            echo "BASE_IMAGE_NAME=$(yq e '.config.base_image_name' config.yaml)"      >> $GITHUB_ENV
+            echo "LIVE_ACCOUNT_ID=$(yq e '.config.live_account_id' config.yaml)"      >> $GITHUB_ENV
+            echo "PRELIVE_ACCOUNT_ID=$(yq e '.config.prelive_account_id' config.yaml)" >> $GITHUB_ENV
+            echo "DOC_SOURCE=$(yq e '.config.doc_source' config.yaml)"                >> $GITHUB_ENV
+            echo "VPC_ID=$(yq e '.config.vpc_id' config.yaml)"                        >> $GITHUB_ENV
+            echo "SUBNET_ID=$(yq e '.config.subnet_id' config.yaml)"                  >> $GITHUB_ENV
+            echo "SECURITY_GROUP_ID=$(yq e '.config.security_group_id' config.yaml)"  >> $GITHUB_ENV
+            echo "ACCOUNT_ID=$(yq e '.config.accounts.account_id' config.yaml)"        >> $GITHUB_ENV
     
       - name: Assume Terragrunt Plan Role
         uses: aws-actions/configure-aws-credentials@v4
@@ -53,17 +66,11 @@ jobs:
           role-to-assume: arn:aws:iam::${{ env.ACCOUNT_ID }}:role/cc-appstream2-terragrunt-plan-role
           aws-region: eu-west-2
 
-      - name: Create output folder
-        run: mkdir -p $GITHUB_WORKSPACE/outputs/${{ inputs.path }}
-
       - name: Find and remove .terragrunt-cache directories
         run: |
           echo "Finding and removing all .terragrunt-cache directories in the working directory..."
           sudo find $GITHUB_WORKSPACE -type d -name '.terragrunt-cache' -exec rm -rf {} +
           echo "Completed removal of .terragrunt-cache directories."
-
-      - name: Debug directory creation
-        run: echo "Path:$GITHUB_WORKSPACE/outputs/${{ inputs.path }}"
 
       - name: Terragrunt Plan
         uses: gruntwork-io/terragrunt-action@v2
@@ -92,21 +99,24 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set environment variables
+      - name: Install yq binary
         run: |
-          echo "ACCOUNT_ID=`yq '.config.accounts.account_id' config.yaml`" >> $GITHUB_ENV
+            curl -L \
+            https://github.com/mikefarah/yq/releases/download/v4.30.8/yq_linux_amd64 \
+            -o /usr/local/bin/yq
+            chmod +x /usr/local/bin/yq
+            yq --version
+
+      - name: Set environment variables
+        shell: bash
+        run: |
+          echo "ACCOUNT_ID=$(yq e '.config.accounts.account_id' config.yaml)" >> $GITHUB_ENV
 
       - name: Configure AWS credentials with role to assume
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::${{ env.ACCOUNT_ID }}:role/cc-appstream2-terragrunt-plan-role
           aws-region: eu-west-2
-
-      - name: Find and remove .terragrunt-cache directories
-        run: |
-          echo "Finding and removing all .terragrunt-cache directories in the working directory..."
-          sudo find $GITHUB_WORKSPACE -type d -name '.terragrunt-cache' -exec rm -rf {} +
-          echo "Completed removal of .terragrunt-cache directories."
 
       - name: Install Terragrunt & Terraform
         uses: gruntwork-io/terragrunt-action@v2
@@ -124,10 +134,11 @@ jobs:
         timeout-minutes: 10
 
       - name: Get State Machine ARN
-        id: get-sm
         working-directory: ./ccpamappstream
         run: |
-          echo "SM_ARN=$(terragrunt output --raw state_machine_arn)" >> $GITHUB_ENV
+          SM_ARN=$(terragrunt output --raw state_machine_arn)
+          echo "SM_ARN=$SM_ARN" >> $GITHUB_ENV
+          echo "Resolved State Machine ARN: $SM_ARN"
 
       - name: Start Step Function Execution
         id: start
@@ -135,35 +146,115 @@ jobs:
           PAYLOAD=$(jq -n \
             --arg builder "${{ github.event.inputs.builder_name }}" \
             --arg baseImage "${{ github.event.inputs.image_name }}" \
-            --arg subnet "${{ secrets.SUBNET_ID }}" \
-            --arg sg "${{ secrets.SECURITY_GROUP_ID }}" \
-            --arg liveAcct "${{ secrets.LIVE_ACCOUNT_ID }}" \
-            --arg preliveAcct "${{ secrets.PRELIVE_ACCOUNT_ID }}" \
+            --arg subnet "${{ env.SUBNET_ID }}" \
+            --arg sg "${{ env.SECURITY_GROUP_ID }}" \
+            --arg liveAcct "${{ env.LIVE_ACCOUNT_ID }}" \
+            --arg preliveAcct "${{ env.PRELIVE_ACCOUNT_ID }}" \
             '{
-              BuilderName:           $builder,
-              BaseImageName:         $baseImage,
-              SubnetIds:             [$subnet],
-              SecurityGroupIds:      [$sg],
-              live_account_id:       $liveAcct,
-              prelive_account_id:    $preliveAcct
+              BuilderName:        $builder,
+              BaseImageName:      $baseImage,
+              SubnetIds:          [$subnet],
+              SecurityGroupIds:   [$sg],
+              live_account_id:    $liveAcct,
+              prelive_account_id: $preliveAcct
             }')
 
           echo "Payload: $PAYLOAD"
           EXEC_ARN=$(aws stepfunctions start-execution \
-            --state-machine-arn "${{ steps.get-sm.outputs.SM_ARN }}" \
+            --state-machine-arn "${{ env.SM_ARN }}" \
             --input "$PAYLOAD" \
             --query executionArn --output text)
+
           echo "EXEC_ARN=$EXEC_ARN" >> $GITHUB_OUTPUT
+          echo "Started execution: $EXEC_ARN"
         
-      - name: Wait for Step Function to Succeed
+      - name: Wait for Step Function Completion
+        shell: bash
         run: |
-          aws stepfunctions wait execution-succeeded \
-            --execution-arn ${{ steps.start.outputs.EXEC_ARN }}
+          set -euo pipefail
+
+          EXECUTION_ARN="${{ steps.start.outputs.EXEC_ARN }}"
+
+          echo "Waiting for Step Function to succeed (ARN: $EXECUTION_ARN)..."
+
+          if ! aws stepfunctions wait execution-succeeded --execution-arn "$EXECUTION_ARN"; then
+            echo "::error ::Step Function waiter failed—fetching execution details for debugging:"
+            aws stepfunctions describe-execution \
+              --execution-arn "$EXECUTION_ARN" \
+              --query '{Status:status,Error:stateMachineError,Cause:stateMachineCause,Output:output}' \
+              --output json
+            exit 1
+          fi
+
+          echo "✅ Step Function execution succeeded!"
         
-      - name: Describe the new AppStream image
+      - name: Check Final AppStream Image Status
+        shell: bash
         run: |
-          aws appstream describe-images \
-            --names "${{ github.event.inputs.image_name }}" \
-            --query "Images[0].{Name: Name, State: State}" \
-            --output table
-        
+            set -euo pipefail
+
+            IMAGE_NAME="${{ github.event.inputs.image_name }}"
+            echo "🔍 Checking status for AppStream image: $IMAGE_NAME"
+
+            # Try to fetch the state, or fallback to NOT_FOUND
+            IMAGE_STATE=$(aws appstream describe-images \
+            --names "$IMAGE_NAME" \
+            --query 'Images[0].State' \
+            --output text 2>/dev/null || echo "NOT_FOUND")
+
+            echo "Image Status: $IMAGE_STATE"
+
+            if [[ "$IMAGE_STATE" == "AVAILABLE" ]]; then
+            echo "✅ Image is AVAILABLE and ready for use!"
+            echo ""
+            echo "ℹ️  Image Details:"
+            aws appstream describe-images \
+                --names "$IMAGE_NAME" \
+                --query 'Images[0].{Name:Name,State:State,CreatedTime:CreatedTime,Description:Description}' \
+                --output table
+            else
+            echo "⚠️  Image is not yet available. Current status: $IMAGE_STATE"
+            if [[ "$IMAGE_STATE" == "NOT_FOUND" ]]; then
+                echo "   It looks like the image doesn’t exist—did the build step succeed?"
+            fi
+            exit 1
+            fi
+
+      - name: Verify Image Sharing
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE_NAME="${{ github.event.inputs.image_name }}"
+
+          echo "🔍 Verifying image sharing with target accounts..."
+          if ! aws appstream describe-image-permissions \
+               --image-name "$IMAGE_NAME" \
+               --query 'Principals[?Permissions[?FleetCreation==`true`]].AccountID' \
+               --output table; then
+            echo "⚠️  Unable to retrieve sharing permissions or none set."
+          fi
+
+          echo ""
+          echo "Image '$IMAGE_NAME' should be shared with:"
+          echo "- Live Account:    ${{ env.LIVE_ACCOUNT_ID }}"
+          echo "- Pre-live Account: ${{ env.PRELIVE_ACCOUNT_ID }}"  
+
+      - name: Cleanup Summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "🎉 AppStream Image Builder Automation Summary"
+          echo "=============================================="
+          echo "Builder Name: ${{ github.event.inputs.builder_name }}"
+          echo "Image Name:   ${{ github.event.inputs.image_name }}"
+          echo "Region:       ${{ env.AWS_REGION }}"
+          echo "Execution ARN: ${{ steps.start.outputs.EXEC_ARN }}"
+          echo ""
+          echo "✅ Infrastructure provisioned"
+          echo "✅ Image builder created and configured"
+          echo "✅ Packages installed via SSM"
+          echo "✅ AppStream image created"
+          echo "✅ Image shared with target accounts"
+          echo "✅ Image builder cleaned up"
+          echo ""
+          echo "Your new AppStream image is ready for use!"
