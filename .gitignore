@@ -41,3 +41,4 @@ terraform.rc
 # Ignore the default terragrunt cache directory
 # https://terragrunt.gruntwork.io/docs/features/caching/
 .terragrunt-cache
+.terraform.lock.hcl

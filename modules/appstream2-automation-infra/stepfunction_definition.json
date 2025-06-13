@@ -140,8 +140,8 @@
       "Parameters": {
         "Name.$": "$.ImageName",
         "ImagePermissions": {
-          "allowFleet": true,
-          "allowImageBuilder": true
+          "AllowFleet": true,
+          "AllowImageBuilder": false
         },
         "SharedAccountId": "$.LiveAccount"
       },
@@ -154,8 +154,8 @@
       "Parameters": {
         "Name.$": "$.ImageName",
         "ImagePermissions": {
-          "allowFleet": true,
-          "allowImageBuilder": true
+          "AllowFleet": true,
+          "AllowImageBuilder": false
         },
         "SharedAccountId": "$.PreliveAccount"
       },
@@ -171,8 +171,7 @@
       "Next": "Success"
     },
     "Success": {
-      "Type": "Succeed",
-      "Result": "AppStream image creation and sharing completed successfully"
+      "Type": "Succeed"
     },
     "SSMCommandFailed": {
       "Type": "Fail",

@@ -34,18 +34,23 @@ ssm/
 
 * **AWS Account** with the following:
 
+  * **OIDC Provider** configured to trust `token.actions.githubusercontent.com` for your GitHub Org/Repo
   * IAM roles:
 
-    * `cc-appstream2-terragrunt-plan/apply-role` for GitHub Actions to assume via OIDC
+    * `cc-appstream2-terragrunt-plan-role` (for planning) and `cc-appstream2-terragrunt-apply-role` (for applying), each with a trust policy allowing `sts:AssumeRoleWithWebIdentity` from GitHub Actions
     * Instance profile for AppStream Image Builder with AmazonSSMManagedInstanceCore
   * VPC, subnets, and security groups for AppStream Image Builder
 
-* **GitHub Repository** configured to use OIDC for AWS authentication (no AWS access keys in secrets) and the following parsed from Terragrunt config:
+* **GitHub Repository** configured with:
 
-  * `SUBNET_ID`: VPC subnet for launching the Image Builder
-  * `SECURITY_GROUP_ID`: Security group to attach to the Image Builder
-  * `LIVE_ACCOUNT_ID`: AWS account ID for sharing the image (live)
-  * `PRELIVE_ACCOUNT_ID`: AWS account ID for sharing the image (pre-live)
+  * [OIDC authentication](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect)
+  * Repository or organization settings to allow workflows to request the roles above
+  * Secrets (just for non-OIDC values):
+
+    * `SUBNET_ID`: VPC subnet for launching the Image Builder
+    * `SECURITY_GROUP_ID`: Security group to attach to the Image Builder
+    * `LIVE_ACCOUNT_ID`: AWS account ID for sharing the image (live)
+    * `PRELIVE_ACCOUNT_ID`: AWS account ID for sharing the image (pre-live)
 
 * **Local Tooling** (for manual development):
 

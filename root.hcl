@@ -3,7 +3,7 @@ locals {
   global_vars = read_terragrunt_config(find_in_parent_folders("globals.hcl"))
 
   # Load project-specific config
-  raw_config = yamldecode(file("${get_terragrunt_dir()}/config.yaml"))
+  raw_config = yamldecode(file(find_in_parent_folders("config.yaml")))
   cfg        = local.raw_config.config
 
   # Extract the required variables for easy access
