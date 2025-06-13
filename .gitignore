@@ -44,5 +44,4 @@ terraform.rc
 
 # Ignore Terraform/Terragrunt lock file in the ccpamappstream module
 ccpamappstream/.terraform.lock.hcl
-
 .terraform.lock.hcl
