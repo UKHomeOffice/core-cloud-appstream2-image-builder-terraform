@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.3",
+  "schemaVersion": "2.2",
   "description": "Install dependencies and build AppStream Rocky Linux image",
   "parameters": {
     "BuilderName": {
@@ -34,7 +34,7 @@
       "name": "AddApplicationsToCatalog",
       "inputs": {
         "runCommand": [
-          "declare -A apps=([Firefox]=\"/usr/bin/firefox\" [vscode]=\"/usr/bin/code\" [kubectl]=\"/usr/local/bin/kubectl\" [helm]=\"/usr/local/bin/helm\" [psql]=\"/usr/bin/psql\" [aws-cli]=\"/usr/local/bin/aws\" [jq]=\"/usr/bin/jq\" [docker]=\"/usr/bin/docker\" [python3]=\"/usr/bin/python3\" [nodejs]=\"/usr/bin/node\" [chrome]=\"/usr/bin/google-chrome\" [msedge]=\"/usr/bin/microsoft-edge\")",
+          "declare -A apps=( [Firefox]=\"/usr/bin/firefox\" [vscode]=\"/usr/bin/code\" [kubectl]=\"/usr/local/bin/kubectl\" [helm]=\"/usr/local/bin/helm\" [psql]=\"/usr/bin/psql\" [aws-cli]=\"/usr/local/bin/aws\" [jq]=\"/usr/bin/jq\" [docker]=\"/usr/bin/docker\" [python3]=\"/usr/bin/python3\" [nodejs]=\"/usr/bin/node\" [chrome]=\"/usr/bin/google-chrome\" [msedge]=\"/usr/bin/microsoft-edge\" )",
           "for name in \"${!apps[@]}\"; do",
           "  path=${apps[$name]};",
           "  if [[ -x \"$path\" ]]; then",
