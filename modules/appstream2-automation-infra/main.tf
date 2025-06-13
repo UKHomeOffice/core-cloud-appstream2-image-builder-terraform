@@ -111,7 +111,7 @@ resource "aws_iam_instance_profile" "appstream_instance_profile" {
 # SSM Document for package installation
 resource "aws_ssm_document" "appstream_setup" {
   name          = "${var.project_name}-setup-document"
-  document_type = "Command"
+  document_type = "Automation"
   content       = file(var.doc_source)
   document_format = "JSON"
 }
