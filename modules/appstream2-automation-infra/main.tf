@@ -108,7 +108,7 @@ resource "aws_iam_instance_profile" "appstream_instance_profile" {
   role = aws_iam_role.appstream_instance_role.name
 }
 
-# SSM Document for package installation
+# SSM Document for package installation // using schemaVersion2.2 in document
 resource "aws_ssm_document" "appstream_setup" {
   name          = "${var.project_name}-setup-document"
   document_type = "Command"
