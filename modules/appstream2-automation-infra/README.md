@@ -32,6 +32,7 @@ No modules.
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
+| <a name="input_account_id"></a> [account\_id](#input\_account\_id) | AWS Account ID where the AppStream Image Builder and Step Functions will be created | `string` | n/a | yes |
 | <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS region | `string` | n/a | yes |
 | <a name="input_base_image_name"></a> [base\_image\_name](#input\_base\_image\_name) | Base AppStream image name | `string` | n/a | yes |
 | <a name="input_doc_source"></a> [doc\_source](#input\_doc\_source) | Path to the SSM document JSON (AppStreamImageAssistant-automation.json) | `string` | n/a | yes |
