@@ -68,7 +68,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::aws-sdk:ssm:sendCommand",
       "Parameters": {
-        "DocumentName": "<YourSSMDocumentName>",
+        "DocumentName": "${SSMDocName}",
         "InstanceIds.$": "States.Array($.InstanceInfo.Reservations[0].Instances[0].InstanceId)",
         "TimeoutSeconds": 3600
       },
