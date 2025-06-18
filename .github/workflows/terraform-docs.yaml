@@ -25,10 +25,16 @@ jobs:
 
       - name: Check module README.md is up to date
         run: |
-          terraform-docs markdown table . > expected.md
+          terraform-docs markdown table . \
+            --output-mode inject \
+            > expected.md
+
           if ! diff -u README.md expected.md; then
-            echo "📖 modules/appstream2-automation-infra/README.md is out of date. Please run:"
-            echo "    cd modules/appstream2-automation-infra"
-            echo "    terraform-docs markdown table . --output-file README.md --output-mode inject"
+            echo "📖 modules/appstream2-automation-infra/README.md is out of date."
+            echo "Please run:"
+            echo "  cd modules/appstream2-automation-infra"
+            echo "  terraform-docs markdown table . \\"
+            echo "    --output-file README.md \\"
+            echo "    --output-mode inject"
             exit 1
           fi
