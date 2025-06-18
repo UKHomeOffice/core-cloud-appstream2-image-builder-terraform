@@ -36,12 +36,4 @@ override.tf.json
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
-
-### Terragrunt template
-# Ignore the default terragrunt cache directory
-# https://terragrunt.gruntwork.io/docs/features/caching/
-.terragrunt-cache
-
-# Ignore Terraform/Terragrunt lock file in the ccpamappstream module
-ccpamappstream/.terraform.lock.hcl
-.terraform.lock.hcl
+.terraform-docs.yml

@@ -1,157 +1,109 @@
 # core-cloud-appstream2-image-builder-terraform
 
-# AppStream 2.0 Rocky Linux Image Build Automation
+# Core Cloud AppStream 2.0 Rocky Linux Image Build Automation Module
 
-This repository contains Terraform/Terragrunt configurations, AWS Step Functions, SSM Automation documents, and a GitHub Actions workflow to fully automate the process of building a custom Rocky Linux AppStream 2.0 image and sharing it with downstream AWS accounts.
+This repository houses the **Terraform module** for provisioning the AWS resources required to automate an Amazon AppStream 2.0 streaming image build. The module sets up:
+
+* IAM Roles & Policies for Step Functions and AppStream Image Builder
+* An SSM Automation Document to install and configure packages on a Rocky Linux Image Builder instance
+* A Step Functions State Machine to orchestrate the build pipeline
+
+---
 
 ## Repository Structure
 
-```
+```text
+./
+├── CODE_OF_CONDUCT.md
+├── CONTRIBUTING.md
+├── LICENSE.md
+├── modules
+│   └── appstream2-automation-infra
+│       ├── main.tf
+│       ├── variables.tf
+│       ├── outputs.tf
+│       ├── stepfunction_definition.json
+│       └── README.md
+└── README.md         ← (this file)
+
 .github/
+├── CODEOWNERS
+├── ISSUE_TEMPLATE/
+│   ├── bug_report.md
+│   └── feature_request.md
+├── labels.yml
+├── PULL_REQUEST_TEMPLATE.md
 └── workflows/
-    └── appstream2-image-build.yaml   # CI/CD workflow definition
-
-ccpamappstream/
-└── terragrunt.hcl                    # Terragrunt config for root module
-
-config.yaml                           # Project-specific variable overrides
-globals.hcl                           # Global Terragrunt settings (region, tags)
-root.hcl                              # Root Terragrunt configuration (provider, remote state)
-
-modules/
-└── appstream2-automation-infra/      # Core automation infrastructure module
-    ├── main.tf                       # IAM roles, SSM document, Step Functions SM
-    ├── variables.tf                  # Module input definitions
-    ├── outputs.tf                    # Module outputs (state machine ARN, etc.)
-    ├── stepfunction_definition.json  # Standalone SFN definition in pure JSON
-    └── README.md                     # Module-specific documentation
-
-ssm/
-└── AppStreamImageAssistant-automation.json  # SSM Automation document for package install & image build
+    ├── pull-request-sast.yaml
+    ├── pull-request-semver-label-check.yaml
+    └── pull-request-semver-tag-merge.yaml
 ```
 
-## Prerequisites
-
-* **AWS Account** with the following:
-
-  * **OIDC Provider** configured to trust `token.actions.githubusercontent.com` for your GitHub Org/Repo
-  * IAM roles:
-
-    * `cc-appstream2-terragrunt-plan-role` (for planning) and `cc-appstream2-terragrunt-apply-role` (for applying), each with a trust policy allowing `sts:AssumeRoleWithWebIdentity` from GitHub Actions
-    * Instance profile for AppStream Image Builder with AmazonSSMManagedInstanceCore
-  * VPC, subnets, and security groups for AppStream Image Builder
-
-* **GitHub Repository** configured with:
-
-  * [OIDC authentication](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect)
-  * Repository or organization settings to allow workflows to request the roles above
-  * Secrets (just for non-OIDC values):
-
-    * `SUBNET_ID`: VPC subnet for launching the Image Builder
-    * `SECURITY_GROUP_ID`: Security group to attach to the Image Builder
-    * `LIVE_ACCOUNT_ID`: AWS account ID for sharing the image (live)
-    * `PRELIVE_ACCOUNT_ID`: AWS account ID for sharing the image (pre-live)
-
-* **Local Tooling** (for manual development):
-
-  * Terraform v1.9.3
-  * Terragrunt v0.59.6
-  * AWS CLI v2
-  * `jq`, `yq` for YAML/JSON parsing
-
-## Configuration
-
-### config.yaml
-
-Define your project and environment-specific values here:
-
-```yaml
-config:
-  project_name: cc-pam
-  base_image_name: AppStream-RockyLinux8-05-30-2025
-  live_account_id: "4799767xxxxx"
-  prelive_account_id: "9005119xxxxx"
-  doc_source:                             # Path to SSM doc (optional override)
-  vpc_id: vpc-05xs5f6e0xxxxxxx
-  subnet_id: subnet-026bxxb538xxxxx
-  security_group_id: sg-03xxxx4b97d81a336
-  accounts:
-    account_id: "8795662xxxx"           # Account for Terragrunt assume-role
-```
-
-### globals.hcl and root.hcl
-
-* `globals.hcl` holds global variables (region, tags).
-* `root.hcl` generates provider and remote state blocks and merges in `config.yaml` values.
-
-## Infrastructure Deployment (Terragrunt)
-
-In the **ccpamappstream/** directory:
-
-```bash
-cd ccpamappstream
-terragrunt init
-terragrunt run-all plan        # preview changes
-terragrunt run-all apply        # deploy IAM roles, SSM doc, Step Function
-```
-
-This will provision:
-
-1. **IAM Roles & Policies** for Step Functions and EC2 (Image Builder)
-2. **SSM Automation Document** to install packages and build the image
-3. **AWS Step Functions** State Machine to orchestrate the end-to-end build
-
-## Automation Module Details
-
-See `modules/appstream2-automation-infra/README.md` for module-specific docs, including:
-
-* **SSM Automation** to install packages and run `AppStreamImageAssistant`
-* **Step Functions** JSON definition
-
-## CI/CD Workflow
-
-The GitHub Actions workflow **.github/workflows/appstream2-image-build.yaml** does the following:
-
-1. **infra** job:
-
-   * Checks out code
-   * Installs `yq`, loads `config.yaml` values into environment variables
-   * Assumes a Terragrunt plan role
-   * Runs `terragrunt run-all plan` and `apply` to deploy infra
-2. **build** job (on `main` branch):
-
-   * Checks out code
-   * Installs `yq`, loads account ID
-   * Assumes AWS credentials
-   * Installs Terragrunt & Terraform via `gruntwork-io/terragrunt-action`
-   * Reads the Step Function ARN from Terragrunt outputs
-   * Starts Step Function execution with a JSON payload
-   * Waits (with built-in waiter + failure debug) for execution success
-   * Verifies the final AppStream image status
-   * Confirms image sharing permissions
-   * Prints a cleanup summary
-
-### Triggering the Workflow
-
-* **Manual dispatch** with `builder_name` and `image_name` inputs
-* **On push to `main`**
-* **On PR** against `main` (optional dry-run)
+---
 
 ## Usage
 
-To build and share a new AppStream image:
+Reference this module from your Terragrunt or Terraform root:
 
-1. Update `config.yaml` as needed.
-2. `git checkout -b feature/your-feature`
-3. Commit changes and push.
-4. Open a PR or merge to `main`.
-5. (If manual) Trigger the workflow via GitHub UI, supplying:
+```hcl
+module "appstream2_automation" {
+  source = "git::https://github.com/UKHomeOffice/core-cloud-appstream2-image-builder-terraform.git//modules/appstream2-automation-infra?ref=v1.0.0"
 
-   * **builder\_name**: e.g. `cc-pam-rocky-2025-06-13`
-   * **image\_name**: e.g. `cc-pam-rocky-linux-2025-06-13`
+  # Required inputs
+  project_name           = "<your-project>"
+  base_image_name        = "AppStream-RockyLinux8-YYYY-MM-DD"
+  live_account_id        = "<aws-account-id>"
+  prelive_account_id     = "<aws-account-id>"
+  doc_source             = "${path.module}/../ssm/AppStreamImageAssistant-automation.json"
+  stepfn_definition_file = "${path.module}/../ssm/stepfunction_definition.json"
 
-Monitor actions logs for end-to-end progress.
+  # Networking
+  vpc_id                 = "<vpc-id>"
+  subnet_id              = "<subnet-id>"
+  security_group_id      = "<sg-id>"
+}
+```
+
+After applying this module, you will have:
+
+* An IAM role and policy for running the SSM automation on EC2
+* An SNS-SSM Automation document (`aws_ssm_document`) to install packages and invoke `AppStreamImageAssistant`
+* A Step Functions state machine (`aws_sfn_state_machine`) definition ready to orchestrate the image build
+
+---
+
+## Inputs
+
+| Name                     | Description                                                                       | Type   | Default | Required |
+| ------------------------ | --------------------------------------------------------------------------------- | ------ | ------- | :------: |
+| project\_name            | Prefix for naming IAM roles, instance profiles, and state machine                 | string | n/a     |    yes   |
+| base\_image\_name        | The base AppStream image name to extend (e.g. `AppStream-RockyLinux8-YYYY-MM-DD`) | string | n/a     |    yes   |
+| live\_account\_id        | AWS account ID to share the final image with                                      | string | n/a     |    yes   |
+| prelive\_account\_id     | AWS account ID to share the final image with (pre-production)                     | string | n/a     |    yes   |
+| doc\_source              | Local path to the SSM Automation JSON document                                    | string | n/a     |    yes   |
+| stepfn\_definition\_file | Local path to the Step Functions JSON definition                                  | string | n/a     |    yes   |
+| vpc\_id                  | VPC ID for the AppStream Image Builder instance                                   | string | n/a     |    yes   |
+| subnet\_id               | Subnet ID for the Image Builder instance                                          | string | n/a     |    yes   |
+| security\_group\_id      | Security Group ID for the Image Builder instance                                  | string | n/a     |    yes   |
+
+---
+
+## Outputs
+
+| Name                | Description                                     |
+| ------------------- | ----------------------------------------------- |
+| ssm\_document\_name | Name of the created SSM Document                |
+| state\_machine\_arn | ARN of the created Step Functions state machine |
+| base\_image\_name   | The `base_image_name` input (echoed back)       |
+
+---
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) (if applicable) for guidelines on reporting issues or submitting enhancements.
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE.md).
