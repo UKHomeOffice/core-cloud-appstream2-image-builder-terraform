@@ -2,6 +2,10 @@ name: Validate Terraform Docs
 
 on:
   pull_request:
+    types: 
+      - opened
+    paths:
+      - modules/appstream2-automation-infra/README.md
 
 permissions:
     contents: read
