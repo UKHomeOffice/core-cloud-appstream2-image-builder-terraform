@@ -2,11 +2,7 @@ name: Validate Terraform Docs
 
 on:
   pull_request:
-    types: 
-      - opened
-    paths:
-      - modules/appstream2-automation-infra/README.md
-
+    
 permissions:
     contents: read
 
@@ -24,11 +20,15 @@ jobs:
           curl -sSL https://github.com/terraform-docs/terraform-docs/releases/download/v0.19.0/terraform-docs-v0.19.0-linux-amd64.tar.gz \
             | tar -xzC /usr/local/bin terraform-docs
 
-      - name: Check README.md is up to date
+      - name: Check module README.md is up to date
         run: |
-          terraform-docs markdown table . > expected.md
-          if ! diff -u README.md expected.md; then
-            echo "📖 README.md is out of date. Please run locally:"
-            echo "    terraform-docs markdown table . --output-file README.md --output-mode inject"
+          terraform-docs markdown table modules/appstream2-automation-infra \
+            > modules/appstream2-automation-infra/expected.md
+          if ! diff -u modules/appstream2-automation-infra/README.md \
+                     modules/appstream2-automation-infra/expected.md; then
+            echo "📖 modules/appstream2-automation-infra/README.md is out of date. Please run:"
+            echo "    terraform-docs markdown table modules/appstream2-automation-infra \\"
+            echo "      --output-file modules/appstream2-automation-infra/README.md \\"
+            echo "      --output-mode inject"
             exit 1
           fi
