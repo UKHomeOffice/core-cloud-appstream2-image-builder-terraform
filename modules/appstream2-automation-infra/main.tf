@@ -17,27 +17,47 @@ resource "aws_iam_role" "step_function_role" {
 }
 
 resource "aws_iam_policy" "step_function_policy" {
-  name = "${var.project_name}-step-function-policy"
-
+  name   = "${var.project_name}-step-function-policy"
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+
+      # Manage Image Builders
       {
-        Effect = "Allow"
-        Action = [
+        Effect   = "Allow"
+        Action   = [
           "appstream:CreateImageBuilder",
           "appstream:DeleteImageBuilder",
-          "appstream:DescribeImageBuilders",
+          "appstream:DescribeImageBuilders"
+        ]
+        Resource = "arn:aws:appstream:${var.aws_region}:${var.account_id}:image-builder/${var.project_name}-*"
+      },
+
+      # Manage Images
+      {
+        Effect   = "Allow"
+        Action   = [
           "appstream:CreateImage",
           "appstream:DescribeImages",
-          "appstream:UpdateImagePermissions",
+          "appstream:UpdateImagePermissions"
+        ]
+        Resource = "arn:aws:appstream:${var.aws_region}:${var.account_id}:image/${var.project_name}-*"
+      },
+
+      # SSM & EC2 Describe (scoped to actual instances)
+      {
+        Effect   = "Allow"
+        Action   = [
           "ssm:SendCommand",
           "ssm:GetCommandInvocation",
-          "ssm:DescribeInstanceInformation",
-          "ec2:DescribeInstances"
+          "ssm:DescribeInstanceInformation"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:ssm:${var.aws_region}:${var.account_id}:managed-instance/*",
+          "arn:aws:ec2:${var.aws_region}:${var.account_id}:instance/*"
+        ]
       }
+
     ]
   })
 }
@@ -66,16 +86,21 @@ resource "aws_iam_role" "appstream_instance_role" {
 }
 
 resource "aws_iam_policy" "appstream_instance_policy" {
-  name = "${var.project_name}-appstream-instance-policy"
-
+  name   = "${var.project_name}-appstream-instance-policy"
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = [
+        Effect   = "Allow"
+        Action   = [
           "ssm:UpdateInstanceInformation",
-          "ssm:SendCommand",
+          "ssm:SendCommand"
+        ]
+        Resource = "arn:aws:ssm:${var.aws_region}:${var.account_id}:managed-instance/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = [
           "ssmmessages:CreateControlChannel",
           "ssmmessages:CreateDataChannel",
           "ssmmessages:OpenControlChannel",
@@ -87,11 +112,12 @@ resource "aws_iam_policy" "appstream_instance_policy" {
           "ec2messages:GetMessages",
           "ec2messages:SendReply"
         ]
-        Resource = "*"
+        Resource = "arn:aws:ec2:${var.aws_region}:${var.account_id}:instance/*"
       }
     ]
   })
 }
+
 
 resource "aws_iam_role_policy_attachment" "appstream_instance_policy_attachment" {
   role       = aws_iam_role.appstream_instance_role.name

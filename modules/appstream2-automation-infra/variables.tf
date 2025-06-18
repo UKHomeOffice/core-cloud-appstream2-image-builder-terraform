@@ -45,3 +45,9 @@ variable "stepfn_definition_file" {
   type        = string
   description = "Path to the Step Functions definition JSON"
 }
+
+# variable "account_id" {
+#   description = "AWS Account ID where the AppStream Image Builder and Step Functions will be created"
+#   type        = string
+# }
+
