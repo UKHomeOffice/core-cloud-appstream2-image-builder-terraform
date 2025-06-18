@@ -10,6 +10,9 @@ jobs:
   RunTerraformDocsValidation:
     name: Run Terraform-docs
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: modules/appstream2-automation-infra
 
     steps:
       - name: Clone Repo
@@ -22,13 +25,10 @@ jobs:
 
       - name: Check module README.md is up to date
         run: |
-          terraform-docs markdown table modules/appstream2-automation-infra \
-            > modules/appstream2-automation-infra/expected.md
-          if ! diff -u modules/appstream2-automation-infra/README.md \
-                     modules/appstream2-automation-infra/expected.md; then
+          terraform-docs markdown table . > expected.md
+          if ! diff -u README.md expected.md; then
             echo "📖 modules/appstream2-automation-infra/README.md is out of date. Please run:"
-            echo "    terraform-docs markdown table modules/appstream2-automation-infra \\"
-            echo "      --output-file modules/appstream2-automation-infra/README.md \\"
-            echo "      --output-mode inject"
+            echo "    cd modules/appstream2-automation-infra"
+            echo "    terraform-docs markdown table . --output-file README.md --output-mode inject"
             exit 1
           fi
