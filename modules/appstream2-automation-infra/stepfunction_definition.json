@@ -9,7 +9,7 @@
         "Name.$": "$.BuilderName",
         "ImageName.$": "$.BaseImageName",
         "InstanceType": "stream.standard.medium",
-        "IamRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/<AppStreamInstanceRoleName>",
+        "IamRoleArn": "${AppStreamInstanceRoleArn}",
         "EnableDefaultInternetAccess": false,
         "VpcConfig": {
           "SubnetIds.$": "$.SubnetIds",
@@ -61,8 +61,8 @@
           }
         ]
       },
-      "Next": "RunSSMCommand",
-      "ResultPath": "$.InstanceInfo"
+      "ResultPath": "$.InstanceInfo",
+      "Next": "RunSSMCommand"
     },
     "RunSSMCommand": {
       "Type": "Task",
@@ -70,10 +70,15 @@
       "Parameters": {
         "DocumentName": "${SSMDocName}",
         "InstanceIds.$": "States.Array($.InstanceInfo.Reservations[0].Instances[0].InstanceId)",
-        "TimeoutSeconds": 3600
+        "TimeoutSeconds": 3600,
+        "Parameters": {
+          "BuilderName":    [ "$.BuilderName" ],
+          "BaseImageName":  [ "$.BaseImageName" ],
+          "FinalImageName": [ "$.FinalImageName" ]
+        }
       },
-      "Next": "WaitForSSMCommand",
-      "ResultPath": "$.CommandInfo"
+      "ResultPath": "$.CommandInfo",
+      "Next": "WaitForSSMCommand"
     },
     "WaitForSSMCommand": {
       "Type": "Wait",
@@ -124,7 +129,7 @@
         {
           "Variable": "$.Images[0].State",
           "StringEquals": "AVAILABLE",
-          "Next": "ShareImage"
+          "Next": "ShareImageLive"
         },
         {
           "Variable": "$.Images[0].State",
@@ -134,7 +139,7 @@
       ],
       "Default": "WaitForImageCreation"
     },
-    "ShareImage": {
+    "ShareImageLive": {
       "Type": "Task",
       "Resource": "arn:aws:states:::aws-sdk:appstream:updateImagePermissions",
       "Parameters": {
@@ -143,10 +148,10 @@
           "AllowFleet": true,
           "AllowImageBuilder": false
         },
-        "SharedAccountId": "$.LiveAccount"
+        "SharedAccountId": "${LiveAccountId}"
       },
-      "Next": "ShareImagePrelive",
-      "ResultPath": "$.ShareLive"
+      "ResultPath": "$.ShareLive",
+      "Next": "ShareImagePrelive"
     },
     "ShareImagePrelive": {
       "Type": "Task",
@@ -157,11 +162,12 @@
           "AllowFleet": true,
           "AllowImageBuilder": false
         },
-        "SharedAccountId": "$.PreliveAccount"
+        "SharedAccountId": "${PreliveAccountId}"
       },
-      "Next": "DeleteImageBuilder",
-      "ResultPath": "$.SharePrelive"
+      "ResultPath": "$.SharePrelive",
+      "Next": "DeleteImageBuilder"
     },
+
     "DeleteImageBuilder": {
       "Type": "Task",
       "Resource": "arn:aws:states:::aws-sdk:appstream:deleteImageBuilder",

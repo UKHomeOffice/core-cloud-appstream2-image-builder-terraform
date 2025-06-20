@@ -7,6 +7,7 @@ This repository houses the **Terraform module** for provisioning the AWS resourc
 * IAM Roles & Policies for Step Functions and AppStream Image Builder
 * An SSM Automation Document to install and configure packages on a Rocky Linux Image Builder instance
 * A Step Functions State Machine to orchestrate the build pipeline
+* SFN definition rendered via `templatefile`
 
 ---
 
