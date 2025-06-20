@@ -146,11 +146,15 @@ resource "aws_ssm_document" "appstream_setup" {
 resource "aws_sfn_state_machine" "appstream_automation" {
   name       = "${var.project_name}-state-machine"
   role_arn   = aws_iam_role.step_function_role.arn
-  # definition = file(var.stepfn_definition_file)
+
+  
   definition = templatefile(
     var.stepfn_definition_file,
     {
       SSMDocName = aws_ssm_document.appstream_setup.name
+      AppStreamInstanceRoleArn = aws_iam_role.appstream_instance_role.arn
+      LiveAccountId      = var.live_account_id
+      PreliveAccountId   = var.prelive_account_id
     }
   )
 }
