@@ -10,12 +10,12 @@ variable "base_image_name" {
 }
 
 variable "live_account_id" {
-  description = "CCPamAppStreamLive AWS Account ID"
+  description = "CCPamAppStreamLive AWS Account ID to share the image (live)"
   type        = string
 }
 
 variable "prelive_account_id" {
-  description = "CCPamAppStreamPrelive AWS Account ID"
+  description = "CCPamAppStreamPrelive AWS Account ID to share the image (prelive)"
   type        = string
 }
 
