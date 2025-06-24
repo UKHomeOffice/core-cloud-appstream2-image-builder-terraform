@@ -34,8 +34,8 @@ resource "aws_iam_policy" "step_function_policy" {
           "appstream:UpdateImagePermissions"
         ]
         Resource = [
-          "arn:aws:appstream:${var.region}:${var.account_id}:image-builder/*",
-          "arn:aws:appstream:${var.region}:${var.account_id}:image/*"
+          "arn:aws:appstream:${var.aws_region}:${var.account_id}:image-builder/*",
+          "arn:aws:appstream:${var.aws_region}:${var.account_id}:image/*"
         ]
       },
 
