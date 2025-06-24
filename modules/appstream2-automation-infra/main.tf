@@ -54,11 +54,13 @@ resource "aws_iam_policy" "step_function_policy" {
         ]
       },
 
-      # Allow IAM Pass Role // aws_iam_role.appstream_instance_role.arn
+      # Allow step-function-role to perfom iam:PassRole on appstream-instance-role
       {
         Effect = "Allow"
         Action = ["iam:PassRole"]
-        Resource = [aws_iam_role.appstream_instance_role.arn]
+        Resource = [
+          aws_iam_role.appstream_instance_role.arn
+        ]
       }
     ]
   })
