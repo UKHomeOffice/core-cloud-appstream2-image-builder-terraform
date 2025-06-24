@@ -57,15 +57,9 @@ resource "aws_iam_policy" "step_function_policy" {
       # Allow IAM Pass Role // aws_iam_role.appstream_instance_role.arn
       {
         Effect = "Allow"
-        Action =[
-          "iam:PassRole"
-        ]
-        Resource = [
-          "arn:aws:iam::${account_id}:role/cc-pam-appstream-instance-role"
-          //aws_iam_role.appstream_instance_role.arn
-        ]
+        Action = ["iam:PassRole"]
+        Resource = [aws_iam_role.appstream_instance_role.arn]
       }
-
     ]
   })
 }
