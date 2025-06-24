@@ -52,6 +52,18 @@ resource "aws_iam_policy" "step_function_policy" {
           "arn:aws:ssm:${var.aws_region}:${var.account_id}:managed-instance/*",
           "arn:aws:ec2:${var.aws_region}:${var.account_id}:instance/*"
         ]
+      },
+
+      # Allow IAM Pass Role // aws_iam_role.appstream_instance_role.arn
+      {
+        Effect = "Allow"
+        Action =[
+          "iam:PassRole"
+        ]
+        Resource = [
+          //"arn:aws:iam::${account_id}:role/${var.project_name}-appstream-instance-role"
+          aws_iam_role.appstream_instance_role.arn
+        ]
       }
 
     ]
