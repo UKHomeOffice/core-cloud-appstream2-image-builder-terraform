@@ -61,8 +61,8 @@ resource "aws_iam_policy" "step_function_policy" {
           "iam:PassRole"
         ]
         Resource = [
-          //"arn:aws:iam::${account_id}:role/${var.project_name}-appstream-instance-role"
-          aws_iam_role.appstream_instance_role.arn
+          "arn:aws:iam::${account_id}:role/${var.project_name}-appstream-instance-role"
+          //aws_iam_role.appstream_instance_role.arn
         ]
       }
 
