@@ -1,3 +1,12 @@
+#####################################################################
+# Ensure AWS creates the AppStream 2.0 service-linked role, which
+# AppStream’s control plane uses to call into your account.
+#####################################################################
+resource "aws_iam_service_linked_role" "appstream" {
+  aws_service_name = "appstream.amazonaws.com"
+  description      = "Service-linked role that allows AppStream 2.0 to manage your resources"
+}
+
 # IAM Role for Step Functions
 resource "aws_iam_role" "step_function_role" {
   name = "${var.project_name}-step-function-role"
@@ -138,7 +147,7 @@ resource "aws_iam_instance_profile" "appstream_instance_profile" {
   role = aws_iam_role.appstream_instance_role.name
 }
 
-# SSM Document for package installation // using schemaVersion2.2 in document
+# SSM Document for package installation
 resource "aws_ssm_document" "appstream_setup" {
   name          = "${var.project_name}-setup-document"
   document_type = "Command"
