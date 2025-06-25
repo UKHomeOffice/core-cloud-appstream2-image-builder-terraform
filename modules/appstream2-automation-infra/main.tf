@@ -141,7 +141,7 @@ resource "aws_iam_instance_profile" "appstream_instance_profile" {
 # attach the AppStream ServiceAccess managed policy
 resource "aws_iam_role_policy_attachment" "appstream_service_access" {
   role       = aws_iam_role.appstream_instance_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonAppStreamServiceAccess"
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAppStreamServiceAccess"
 }
 
 # SSM Document for package installation
