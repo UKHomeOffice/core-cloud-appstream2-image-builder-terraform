@@ -22,42 +22,46 @@ resource "aws_iam_policy" "step_function_policy" {
     Version = "2012-10-17"
     Statement = [
 
-      # Manage Image Builders
+      # Allow AppStream Image Builder & Image actions, scoped to account
       {
         Effect   = "Allow"
         Action   = [
           "appstream:CreateImageBuilder",
           "appstream:DeleteImageBuilder",
-          "appstream:DescribeImageBuilders"
-        ]
-        Resource = "arn:aws:appstream:${var.aws_region}:${var.account_id}:image-builder/${var.project_name}-*"
-      },
-
-      # Manage Images
-      {
-        Effect   = "Allow"
-        Action   = [
+          "appstream:DescribeImageBuilders",
           "appstream:CreateImage",
           "appstream:DescribeImages",
           "appstream:UpdateImagePermissions"
         ]
-        Resource = "arn:aws:appstream:${var.aws_region}:${var.account_id}:image/${var.project_name}-*"
+        Resource = [
+          "arn:aws:appstream:${var.aws_region}:${var.account_id}:image-builder/*",
+          "arn:aws:appstream:${var.aws_region}:${var.account_id}:image/*"
+        ]
       },
 
-      # SSM & EC2 Describe (scoped to actual instances)
+      # SSM/EC2 permissions for the RunSSMCommand step
       {
         Effect   = "Allow"
         Action   = [
           "ssm:SendCommand",
           "ssm:GetCommandInvocation",
-          "ssm:DescribeInstanceInformation"
+          "ssm:DescribeInstanceInformation",
+          "ec2:DescribeInstances"
         ]
         Resource = [
           "arn:aws:ssm:${var.aws_region}:${var.account_id}:managed-instance/*",
           "arn:aws:ec2:${var.aws_region}:${var.account_id}:instance/*"
         ]
-      }
+      },
 
+      # Allow step-function-role to perfom iam:PassRole on appstream-instance-role
+      {
+        Effect = "Allow"
+        Action = ["iam:PassRole"]
+        Resource = [
+          aws_iam_role.appstream_instance_role.arn
+        ]
+      }
     ]
   })
 }
