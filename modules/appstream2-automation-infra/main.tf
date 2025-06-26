@@ -168,6 +168,7 @@ resource "aws_sfn_state_machine" "appstream_automation" {
       AppStreamInstanceRoleArn = aws_iam_role.appstream_instance_role.arn
       LiveAccountId      = var.live_account_id
       PreliveAccountId   = var.prelive_account_id
+      FinalImageName     = var.final_image_name
     }
   )
 }

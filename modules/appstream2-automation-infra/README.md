@@ -23,6 +23,7 @@ No modules.
 | [aws_iam_role.appstream_instance_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role.step_function_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role_policy_attachment.appstream_instance_policy_attachment](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_iam_role_policy_attachment.appstream_service_access](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.appstream_ssm_managed_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.step_function_policy_attachment](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_sfn_state_machine.appstream_automation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sfn_state_machine) | resource |
@@ -36,6 +37,7 @@ No modules.
 | <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS region | `string` | n/a | yes |
 | <a name="input_base_image_name"></a> [base\_image\_name](#input\_base\_image\_name) | Base AppStream image name | `string` | n/a | yes |
 | <a name="input_doc_source"></a> [doc\_source](#input\_doc\_source) | Path to the SSM document JSON (AppStreamImageAssistant-automation.json) | `string` | n/a | yes |
+| <a name="input_final_image_name"></a> [final\_image\_name](#input\_final\_image\_name) | The name for the Final image built by the ImageBuilder | `string` | n/a | yes |
 | <a name="input_live_account_id"></a> [live\_account\_id](#input\_live\_account\_id) | CCPamAppStreamLive AWS Account ID to share the image (live) | `string` | n/a | yes |
 | <a name="input_prelive_account_id"></a> [prelive\_account\_id](#input\_prelive\_account\_id) | CCPamAppStreamPrelive AWS Account ID to share the image (prelive) | `string` | n/a | yes |
 | <a name="input_project_name"></a> [project\_name](#input\_project\_name) | Project name for resource naming | `string` | `"appstream-automation"` | no |
