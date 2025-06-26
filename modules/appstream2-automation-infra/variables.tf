@@ -51,8 +51,3 @@ variable "account_id" {
   type        = string
 }
 
-variable "final_image_name" {
-  description = "The name for the Final image built by the ImageBuilder"
-  type        = string
-}
-

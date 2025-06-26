@@ -37,7 +37,6 @@ No modules.
 | <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS region | `string` | n/a | yes |
 | <a name="input_base_image_name"></a> [base\_image\_name](#input\_base\_image\_name) | Base AppStream image name | `string` | n/a | yes |
 | <a name="input_doc_source"></a> [doc\_source](#input\_doc\_source) | Path to the SSM document JSON (AppStreamImageAssistant-automation.json) | `string` | n/a | yes |
-| <a name="input_final_image_name"></a> [final\_image\_name](#input\_final\_image\_name) | The name for the Final image built by the ImageBuilder | `string` | n/a | yes |
 | <a name="input_live_account_id"></a> [live\_account\_id](#input\_live\_account\_id) | CCPamAppStreamLive AWS Account ID to share the image (live) | `string` | n/a | yes |
 | <a name="input_prelive_account_id"></a> [prelive\_account\_id](#input\_prelive\_account\_id) | CCPamAppStreamPrelive AWS Account ID to share the image (prelive) | `string` | n/a | yes |
 | <a name="input_project_name"></a> [project\_name](#input\_project\_name) | Project name for resource naming | `string` | `"appstream-automation"` | no |
