@@ -29,7 +29,6 @@ resource "aws_iam_policy" "step_function_policy" {
           "appstream:CreateImageBuilder",
           "appstream:DeleteImageBuilder",
           "appstream:DescribeImageBuilders",
-          "appstream:CreateImage",
           "appstream:DescribeImages",
           "appstream:UpdateImagePermissions"
         ]
@@ -39,18 +38,16 @@ resource "aws_iam_policy" "step_function_policy" {
         ]
       },
 
-      # SSM/EC2 permissions for the RunSSMCommand step
+      # SSM permissions for the RunSSMCommand step
       {
         Effect   = "Allow"
         Action   = [
           "ssm:SendCommand",
           "ssm:GetCommandInvocation",
-          "ssm:DescribeInstanceInformation",
-          "ec2:DescribeInstances"
+          "ssm:DescribeInstanceInformation"
         ]
         Resource = [
           "arn:aws:ssm:${var.aws_region}:${var.account_id}:managed-instance/*",
-          "arn:aws:ec2:${var.aws_region}:${var.account_id}:instance/*"
         ]
       },
 
@@ -61,6 +58,16 @@ resource "aws_iam_policy" "step_function_policy" {
         Resource = [
           aws_iam_role.appstream_instance_role.arn
         ]
+      },
+      # Allow Step-function-role to perform EC2DescribeInstances on Builder Instances
+      {
+        Effect   = "Allow"
+        Action   = [
+          "ec2:DescribeInstances",
+          "ec2:DescribeInstanceStatus",
+          "ec2:DescribeInstanceAttribute"
+        ]
+        Resource = "*"
       }
     ]
   })
