@@ -30,7 +30,8 @@ resource "aws_iam_policy" "step_function_policy" {
           "appstream:DeleteImageBuilder",
           "appstream:DescribeImageBuilders",
           "appstream:DescribeImages",
-          "appstream:UpdateImagePermissions"
+          "appstream:UpdateImagePermissions",
+          "appstream:TagResource"
         ]
         Resource = [
           "arn:aws:appstream:${var.aws_region}:${var.account_id}:image-builder/*",
@@ -65,7 +66,8 @@ resource "aws_iam_policy" "step_function_policy" {
         Action   = [
           "ec2:DescribeInstances",
           "ec2:DescribeInstanceStatus",
-          "ec2:DescribeInstanceAttribute"
+          "ec2:DescribeInstanceAttribute",
+          "ec2:DescribeNetworkInterfaces"
         ]
         Resource = "*"
       }
