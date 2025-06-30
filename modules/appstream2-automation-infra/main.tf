@@ -44,12 +44,9 @@ resource "aws_iam_policy" "step_function_policy" {
         Effect   = "Allow"
         Action   = [
           "ssm:SendCommand",
-          "ssm:GetCommandInvocation",
-          "ssm:DescribeInstanceInformation"
+          "ssm:GetCommandInvocation"
         ]
-        Resource = [
-          "arn:aws:ssm:${var.aws_region}:${var.account_id}:managed-instance/*",
-        ]
+        Resource = "arn:aws:ssm:${var.aws_region}:${var.account_id}:managed-instance/*"
       },
 
       # Allow step-function-role to perfom iam:PassRole on appstream-instance-role
@@ -70,7 +67,13 @@ resource "aws_iam_policy" "step_function_policy" {
           "ec2:DescribeNetworkInterfaces"
         ]
         Resource = "*"
-      }
+      },
+      # SSM permissions for ssm:DescribeInstanceInformation
+      {
+        Effect   = "Allow"
+        Action   = ["ssm:DescribeInstanceInformation"]
+        Resource = "*"
+      },
     ]
   })
 }
